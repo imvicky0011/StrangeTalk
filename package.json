@@ -1,0 +1,16 @@
+{
+  "name": "strangetalk",
+  "version": "1.0.0",
+  "description": "An app which faciliates the user to interact with strangers, and friends via video calling, audio calling, and text messaging.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon server.js"
+  },
+  "author": "Vicky Gupta",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.1"
+  }
+}
