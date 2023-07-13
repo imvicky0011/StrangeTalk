@@ -14,9 +14,19 @@ app.get('/', (req, res) => {
     res.sendFile(__dirname + '/public/index.html')
 })
 
+let connectedPeers = []
+
+
 io.on("connection", (socket) => {
-    console.log("A user connected to the socket.io server")
-    console.log(socket.id)
+    connectedPeers.push(socket.id)
+    console.log(connectedPeers)
+    socket.on('disconnect', () => {
+        console.log(`User ${socket.id} disconnected!`)
+
+        const newConnectedPeers = connectedPeers.filter(peer => peer !== socket.id)
+        connectedPeers = newConnectedPeers
+        console.log(connectedPeers)
+    })
 })
 
 server.listen(PORT, () => {
