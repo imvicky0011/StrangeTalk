@@ -4,7 +4,7 @@
   "description": "An app which faciliates the user to interact with strangers, and friends via video calling, audio calling, and text messaging.",
   "main": "server.js",
   "engines": {
-    "node": "14.x"
+    "node": "18.x"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
