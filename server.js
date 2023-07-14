@@ -20,6 +20,31 @@ let connectedPeers = []
 io.on("connection", (socket) => {
     connectedPeers.push(socket.id)
     console.log(connectedPeers)
+
+    //socker server recieving the pre offer from the callee.
+    socket.on("pre-offer", (data) => {
+        console.log("pre-offer-came")
+        console.log(data)
+    
+        const {calleePersonalCode, callType} = data
+
+
+        const connectedPeer = connectedPeers.filter((peerSocketId) => {
+            peerSocketId === calleePersonalCode
+        })
+        console.log(connectedPeer)
+        console.log(connectedPeers)
+
+        if(connectedPeer) {
+            const data = {
+                callerSocketId: socket.id,
+                callType
+            }
+            console.log("Sending the received pre-offer to the callee")
+            io.to(calleePersonalCode).emit("pre-offer", data);
+        }
+    })
+
     socket.on('disconnect', () => {
         console.log(`User ${socket.id} disconnected!`)
 

@@ -1,10 +1,13 @@
 import * as store from './store.js'
 import * as ui from './ui.js'
+import * as webRTCHandler from './webRTCHandler.js' 
 
+let socketIO = null
 
 export const registerSocketEvents = (socket) => {
 
     socket.on("connect", () => {
+        socketIO = socket
         console.log("Successfully connected to socket.io server")
         console.log(socket.id)
     
@@ -12,4 +15,13 @@ export const registerSocketEvents = (socket) => {
         ui.updatePersonalCode(socket.id)
     })
 
+    socket.on('pre-offer', (data) => {
+        webRTCHandler.handlePreOffer(data)
+    })
+}
+
+export const sendPreOffer = (socket, data) => {    
+    console.log(socket)
+    console.log(data)
+    socket.emit("pre-offer", data)
 }
