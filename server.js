@@ -1,59 +1,128 @@
-const express = require('express')
-const http = require('http')
+const express = require("express");
+const http = require("http");
 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3000;
 
-const app = express()
-const server = http.createServer(app)
-const io = require("socket.io")(server)
+const app = express();
+const server = http.createServer(app);
+const io = require("socket.io")(server);
 
-//making all the files in the public folder to be accessible from the outside
-app.use(express.static("public"))
+app.use(express.static("public"));
 
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/public/index.html')
-})
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
 
-let connectedPeers = []
-
+let connectedPeers = [];
+let connectedPeersStrangers = [];
 
 io.on("connection", (socket) => {
-    connectedPeers.push(socket.id)
-    console.log(connectedPeers)
+  connectedPeers.push(socket.id);
 
-    //socker server recieving the pre offer from the callee.
-    socket.on("pre-offer", (data) => {
-        console.log("pre-offer-came")
-        console.log(data)
-    
-        const {calleePersonalCode, callType} = data
+  socket.on("pre-offer", (data) => {
+    const { calleePersonalCode, callType } = data;
+    const connectedPeer = connectedPeers.find(
+      (peerSocketId) => peerSocketId === calleePersonalCode
+    );
 
+    if (connectedPeer) {
+      const data = {
+        callerSocketId: socket.id,
+        callType,
+      };
+      io.to(calleePersonalCode).emit("pre-offer", data);
+    } else {
+      const data = {
+        preOfferAnswer: "CALLEE_NOT_FOUND",
+      };
+      io.to(socket.id).emit("pre-offer-answer", data);
+    }
+  });
 
-        const connectedPeer = connectedPeers.filter((peerSocketId) => {
-            peerSocketId === calleePersonalCode
-        })
-        console.log(connectedPeer)
-        console.log(connectedPeers)
+  socket.on("pre-offer-answer", (data) => {
+    const { callerSocketId } = data;
 
-        if(connectedPeer) {
-            const data = {
-                callerSocketId: socket.id,
-                callType
-            }
-            console.log("Sending the received pre-offer to the callee")
-            io.to(calleePersonalCode).emit("pre-offer", data);
-        }
-    })
+    const connectedPeer = connectedPeers.find(
+      (peerSocketId) => peerSocketId === callerSocketId
+    );
 
-    socket.on('disconnect', () => {
-        console.log(`User ${socket.id} disconnected!`)
+    if (connectedPeer) {
+      io.to(data.callerSocketId).emit("pre-offer-answer", data);
+    }
+  });
 
-        const newConnectedPeers = connectedPeers.filter(peer => peer !== socket.id)
-        connectedPeers = newConnectedPeers
-        console.log(connectedPeers)
-    })
-})
+  socket.on("webRTC-signaling", (data) => {
+    const { connectedUserSocketId } = data;
+
+    const connectedPeer = connectedPeers.find(
+      (peerSocketId) => peerSocketId === connectedUserSocketId
+    );
+
+    if (connectedPeer) {
+      io.to(connectedUserSocketId).emit("webRTC-signaling", data);
+    }
+  });
+
+  socket.on("user-hanged-up", (data) => {
+    const { connectedUserSocketId } = data;
+
+    const connectedPeer = connectedPeers.find(
+      (peerSocketId) => peerSocketId === connectedUserSocketId
+    );
+
+    if (connectedPeer) {
+      io.to(connectedUserSocketId).emit("user-hanged-up");
+    }
+  });
+
+  socket.on("stranger-connection-status", (data) => {
+    const { status } = data;
+    if (status) {
+      connectedPeersStrangers.push(socket.id);
+    } else {
+      const newConnectedPeersStrangers = connectedPeersStrangers.filter(
+        (peerSocketId) => peerSocketId !== socket.id
+      );
+      connectedPeersStrangers = newConnectedPeersStrangers;
+    }
+  });
+
+  socket.on("get-stranger-socket-id", () => {
+    let randomStrangerSocketId;
+    const filteredConnectedPeersStrangers = connectedPeersStrangers.filter(
+      (peerSocketId) => peerSocketId !== socket.id
+    );
+
+    if (filteredConnectedPeersStrangers.length > 0) {
+      randomStrangerSocketId =
+        filteredConnectedPeersStrangers[
+          Math.floor(Math.random() * filteredConnectedPeersStrangers.length)
+        ];
+    } else {
+      randomStrangerSocketId = null;
+    }
+
+    const data = {
+      randomStrangerSocketId,
+    };
+
+    io.to(socket.id).emit("stranger-socket-id", data);
+  });
+
+  socket.on("disconnect", () => {
+    const newConnectedPeers = connectedPeers.filter(
+      (peerSocketId) => peerSocketId !== socket.id
+    );
+
+    connectedPeers = newConnectedPeers;
+
+    const newConnectedPeersStrangers = connectedPeersStrangers.filter(
+      (peerSocketId) => peerSocketId !== socket.id
+    );
+    connectedPeersStrangers = newConnectedPeersStrangers;
+  });
+});
 
 server.listen(PORT, () => {
-    console.log("Server listening to the PORT 3000")
-})
+  console.log(`listening on ${PORT}`);
+});
